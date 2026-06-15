@@ -12,7 +12,3 @@ h2 { text-align: center; color: #111; font-size: 2rem; margin-top: 0; }
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
     gap: 20px;
   }
-  
-  .hoenn-card {
-    border-top: 4px solid #4caf50;
-  }

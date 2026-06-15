@@ -1,92 +1,108 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { PokemonMartService } from './pokemon-mart.service';
 
-export interface Pokemon {
-  name: string;
-  region: 'Kanto' | 'Johto' | 'Hoenn';
-  type: string;
-  heldItem: string;
-  description: string;
-  emoji: string;
-}
+@Component({
+  selector: 'app-pokemart',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="mart-layout">
+      
+      <div class="catalog-section">
+        <h2 class="section-title">🛒 Available Mart Inventory</h2>
+        <div class="items-grid">
+          @for (item of service.martItems(); track item.id) {
+            <div class="item-card">
+              <div class="item-info">
+                <span class="item-emoji">{{ item.emoji }}</span>
+                <div>
+                  <h3>{{ item.name }}</h3>
+                  <p class="price-lbl">{{ item.price }} PokéDollars</p>
+                  <p class="desc-lbl">{{ item.description }}</p>
+                </div>
+              </div>
+              <button class="add-btn" (click)="service.addToCart(item)">+ Purchase Item</button>
+            </div>
+          }
+        </div>
+      </div>
 
-export interface MartItem {
-  id: number;
-  name: string;
-  price: number;
-  description: string;
-  emoji: string;
-}
+      <div class="basket-section">
+        <h2 class="section-title">🎒 Your Adventure Bag</h2>
+        
+        @if (service.cart().length === 0) {
+          <div class="empty-notice">
+            <p>Your shopping basket is currently empty.</p>
+            <span style="font-size: 3rem;">🎒</span>
+          </div>
+        } @else {
+          <div class="cart-list">
+            @for (line of service.cart(); track line.product.id) {
+              <div class="cart-line-item">
+                <div class="line-meta">
+                  <span>{{ line.product.emoji }}</span>
+                  <div>
+                    <strong>{{ line.product.name }}</strong>
+                    <p>{{ line.product.price }} x {{ line.quantity }}</p>
+                  </div>
+                </div>
+                <div class="line-actions">
+                  <span class="line-subtotal">₽{{ line.product.price * line.quantity }}</span>
+                  <button class="del-btn" (click)="service.removeFromCart(line.product.id)">🗑️</button>
+                </div>
+              </div>
+            }
 
-export interface CartItem {
-  product: MartItem;
-  quantity: number;
-}
+            <div class="receipt-footer">
+              <div class="total-row">
+                <span>Grand Total:</span>
+                <strong class="total-amount">₽{{ service.cartTotal() }}</strong>
+              </div>
+              <button class="checkout-btn" (click)="processCheckout()">💳 Finalize Invoice Checkout</button>
+            </div>
+          </div>
+        }
 
-@Injectable({
-  providedIn: 'root'
+      </div>
+    </div>
+  `,
+  styles: [`
+    .mart-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-top: 20px; }
+    @media (max-width: 900px) { .mart-layout { grid-template-columns: 1fr; } }
+    .section-title { font-size: 1.5rem; color: #111827; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+    .items-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    @media (max-width: 600px) { .items-grid { grid-template-columns: 1fr; } }
+    
+    .item-card { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .item-info { display: flex; gap: 12px; align-items: flex-start; }
+    .item-emoji { font-size: 1.8rem; background: #f3f4f6; padding: 8px; border-radius: 8px; }
+    .item-info h3 { margin: 0 0 4px 0; font-size: 1.1rem; }
+    .price-lbl { margin: 0 0 6px 0; font-weight: bold; color: #dc2626; font-size: 0.95rem; }
+    .desc-lbl { margin: 0; font-size: 0.85rem; color: #6b7280; }
+    .add-btn { background: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; transition: background 0.2s; }
+    .add-btn:hover { background: #1d4ed8; }
+
+    .basket-section { background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 12px; padding: 20px; height: fit-content; }
+    .empty-notice { text-align: center; padding: 4px 0; color: #9ca3af; }
+    .cart-line-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #e5e7eb; }
+    .line-meta { display: flex; gap: 10px; align-items: center; }
+    .line-actions { display: flex; align-items: center; gap: 15px; }
+    .line-subtotal { font-weight: bold; color: #374151; }
+    .del-btn { background: none; border: none; cursor: pointer; font-size: 1.1rem; }
+    
+    .receipt-footer { margin-top: 25px; border-top: 2px solid #e5e7eb; padding-top: 15px; }
+    .total-row { display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: bold; margin-bottom: 15px; }
+    .total-amount { color: #16a34a; }
+    .checkout-btn { background: #16a34a; color: white; border: none; width: 100%; padding: 12px; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+    .checkout-btn:hover { background: #15803d; }
+  `]
 })
 export class PokemonMart {
-  private favoritePokemon = signal<Pokemon[]>([
-    { name: 'Charizard', region: 'Kanto', type: 'Fire / Flying', heldItem: 'Charizardite Y', description: 'It flies around the sky in search of powerful opponents.', emoji: '🔥' },
-    { name: 'Gengar', region: 'Kanto', type: 'Ghost / Poison', heldItem: 'Life Orb', description: 'Hides in shadows. It is said that if Gengar is hiding, it cools the area.', emoji: '👻' },
-    { name: 'Tyranitar', region: 'Johto', type: 'Rock / Dark', heldItem: 'Assault Vest', description: 'Its body cannot be harmed by any sort of attack, so it is very eager to fight.', emoji: '🦖' },
-    { name: 'Ampharos', region: 'Johto', type: 'Electric', heldItem: 'Magnet', description: 'The light from its tail can be seen from space. It used to be used as a beacon.', emoji: '⚡' },
-    { name: 'Sceptile', region: 'Hoenn', type: 'Grass', heldItem: 'Miracle Seed', description: 'The leaves growing on its arms can slice down thick trees with swift agility.', emoji: '🦎' },
-    { name: 'Metagross', region: 'Hoenn', type: 'Steel / Psychic', heldItem: 'Choice Band', description: 'With four brains, it has the intelligence of a supercomputer to calculate combat.', emoji: '🤖' }
-  ]);
+  service = inject(PokemonMartService);
 
-  private martCatalog = signal<MartItem[]>([
-    { id: 1, name: 'Poké Ball', price: 200, description: 'A device for catching wild Pokémon.', emoji: '🔴' },
-    { id: 2, name: 'Great Ball', price: 600, description: 'A high-performance Ball with a higher catch rate.', emoji: '🔵' },
-    { id: 3, name: 'Ultra Ball', price: 1200, description: 'An ultra-performance Ball with an excellent catch rate.', emoji: '🟡' },
-    { id: 4, name: 'Potion', price: 300, description: 'Restores a Pokémon’s HP by 20 points.', emoji: '🧪' },
-    { id: 5, name: 'Super Potion', price: 700, description: 'Restores a Pokémon’s HP by 60 points.', emoji: '🥤' },
-    { id: 6, name: 'Hyper Potion', price: 1500, description: 'Restores a Pokémon’s HP by 200 points.', emoji: '🥛' },
-    { id: 7, name: 'Revive', price: 1500, description: 'Revives a fainted Pokémon with half its max HP.', emoji: '💎' },
-    { id: 8, name: 'Full Heal', price: 600, description: 'Heals all status conditions of a single Pokémon.', emoji: '💊' },
-    { id: 9, name: 'Max Elixir', price: 4500, description: 'Fully restores PP for all moves of a Pokémon.', emoji: '🍶' },
-    { id: 10, name: 'Rare Candy', price: 10000, description: 'An energy-filled candy that raises a Pokémon by one level.', emoji: '🍬' }
-  ]);
-
-  private shoppingCart = signal<CartItem[]>([]);
-
-  pokemonList = this.favoritePokemon.asReadonly();
-  martItems = this.martCatalog.asReadonly();
-  cart = this.shoppingCart.asReadonly();
-
-  cartTotal = computed(() => {
-    return this.shoppingCart().reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-  });
-
-  addToCart(item: MartItem) {
-    const currentCart = this.shoppingCart();
-    const existingItemIndex = currentCart.findIndex(cartItem => cartItem.product.id === item.id);
-
-    if (existingItemIndex > -1) {
-      const updatedCart = [...currentCart];
-      updatedCart[existingItemIndex].quantity += 1;
-      this.shoppingCart.set(updatedCart);
-    } else {
-      this.shoppingCart.set([...currentCart, { product: item, quantity: 1 }]);
-    }
-  }
-
-  removeFromCart(itemId: number) {
-    const currentCart = this.shoppingCart();
-    const itemIndex = currentCart.findIndex(cartItem => cartItem.product.id === itemId);
-
-    if (itemIndex > -1) {
-      const updatedCart = [...currentCart];
-      if (updatedCart[itemIndex].quantity > 1) {
-        updatedCart[itemIndex].quantity -= 1;
-      } else {
-        updatedCart.splice(itemIndex, 1);
-      }
-      this.shoppingCart.set(updatedCart);
-    }
-  }
-
-  clearCart() {
-    this.shoppingCart.set([]);
+  processCheckout() {
+    alert(`Transaction Successful! Handing over items. Total Charged: ₽${this.service.cartTotal()}`);
+    this.service.clearCart();
   }
 }

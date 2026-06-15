@@ -1,13 +1,16 @@
-<nav class="navbar">
-  <div class="nav-brand">🏆 Pokémon Gym Leader Field Guide</div>
-  <div class="nav-links">
-    <a routerLink="home" routerLinkActive="active-link">Home</a>
-    <a routerLink="kanto" routerLinkActive="active-link">Kanto Region</a>
-    <a routerLink="johto" routerLinkActive="active-link">Johto Region</a>
-    <a routerLink="hoenn" routerLinkActive="active-link">Hoenn Region</a>
+<nav class="app-navbar">
+  <div class="brand">🎈 Pokémon Master Hub</div>
+  <div class="links">
+    <a routerLink="showcase" routerLinkActive="active">🌟 Team Showcase</a>
+    <a routerLink="mart" routerLinkActive="active">🛒 Silph Co. PokéMart</a>
+    
+    <a routerLink="home" routerLinkActive="active">🏠 Home</a>
+    <a routerLink="kanto" routerLinkActive="active">🔴 Kanto</a>
+    <a routerLink="johto" routerLinkActive="active">🔵 Johto</a>
+    <a routerLink="hoenn" routerLinkActive="active">🟢 Hoenn</a>
   </div>
 </nav>
 
-<main class="content-body">
+<main class="page-viewport">
   <router-outlet></router-outlet>
 </main>
